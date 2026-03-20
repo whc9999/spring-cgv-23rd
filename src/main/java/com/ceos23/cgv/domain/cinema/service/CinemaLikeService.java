@@ -6,6 +6,8 @@ import com.ceos23.cgv.domain.cinema.repository.CinemaLikeRepository;
 import com.ceos23.cgv.domain.cinema.repository.CinemaRepository;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,9 +30,9 @@ public class CinemaLikeService {
     @Transactional
     public String toggleCinemaLike(Long userId, Long cinemaId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         Cinema cinema = cinemaRepository.findById(cinemaId)
-                .orElseThrow(() -> new IllegalArgumentException("극장을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
 
         // 기존에 자주 가는 극장으로 등록했는지 확인
         Optional<CinemaLike> existingLike = cinemaLikeRepository.findByUserIdAndCinemaId(userId, cinemaId);

@@ -7,6 +7,8 @@ import com.ceos23.cgv.domain.reservation.entity.Reservation;
 import com.ceos23.cgv.domain.reservation.entity.ReservedSeat;
 import com.ceos23.cgv.domain.reservation.repository.ReservationRepository;
 import com.ceos23.cgv.domain.reservation.repository.ReservedSeatRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -28,10 +30,10 @@ public class ReservedSeatService {
     public List<ReservedSeat> createReservedSeats(ReservedSeatRequest request) {
 
         Reservation reservation = reservationRepository.findById(request.reservationId())
-                .orElseThrow(() -> new IllegalArgumentException("예매 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         Screening screening = screeningRepository.findById(request.screeningId())
-                .orElseThrow(() -> new IllegalArgumentException("상영 일정을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.SCREENING_NOT_FOUND));
 
         List<ReservedSeat> reservedSeats = request.seats().stream()
                 .map(seatInfo -> ReservedSeat.builder()
@@ -45,7 +47,7 @@ public class ReservedSeatService {
         try {
             return reservedSeatRepository.saveAll(reservedSeats);
         } catch (DataIntegrityViolationException e) {
-            throw new IllegalStateException("이미 예매가 완료된 좌석이 포함되어 있습니다. 다른 좌석을 선택해 주세요.");
+            throw new CustomException(ErrorCode.SEAT_ALREADY_RESERVED);
         }
     }
 

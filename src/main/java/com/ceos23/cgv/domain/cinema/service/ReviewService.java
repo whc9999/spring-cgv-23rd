@@ -7,6 +7,8 @@ import com.ceos23.cgv.domain.movie.repository.MovieRepository;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
 import com.ceos23.cgv.domain.cinema.dto.ReviewCreateRequest;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,10 +30,10 @@ public class ReviewService {
     @Transactional
     public Review createReview(ReviewCreateRequest request) {
         User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Movie movie = movieRepository.findById(request.movieId())
-                .orElseThrow(() -> new IllegalArgumentException("영화를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
 
         Review review = Review.builder()
                 .user(user)

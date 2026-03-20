@@ -12,6 +12,8 @@ import com.ceos23.cgv.domain.concession.repository.OrderItemRepository;
 import com.ceos23.cgv.domain.concession.repository.ProductRepository;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,9 +45,9 @@ public class ConcessionService {
     public FoodOrder createOrder(FoodOrderRequest request) {
         // 1. 유저와 픽업할 영화관 지점 조회
         User user = userRepository.findById(request.userId())
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         Cinema cinema = cinemaRepository.findById(request.cinemaId())
-                .orElseThrow(() -> new IllegalArgumentException("영화관 지점을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
 
         int calculatedTotalPrice = 0;
 
@@ -58,7 +60,7 @@ public class ConcessionService {
 
         for (FoodOrderRequest.OrderItemRequest itemReq : request.orderItems()) {
             Product product = productRepository.findById(itemReq.productId())
-                    .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
+                    .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 
             calculatedTotalPrice += (product.getPrice() * itemReq.quantity());
 

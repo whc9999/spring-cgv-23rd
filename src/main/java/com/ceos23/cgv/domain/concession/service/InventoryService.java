@@ -7,6 +7,8 @@ import com.ceos23.cgv.domain.concession.entity.Inventory;
 import com.ceos23.cgv.domain.concession.entity.Product;
 import com.ceos23.cgv.domain.concession.repository.InventoryRepository;
 import com.ceos23.cgv.domain.concession.repository.ProductRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,9 +28,9 @@ public class InventoryService {
     @Transactional
     public Inventory updateInventory(InventoryUpdateRequest request) {
         Cinema cinema = cinemaRepository.findById(request.cinemaId())
-                .orElseThrow(() -> new IllegalArgumentException("극장을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.CINEMA_NOT_FOUND));
         Product product = productRepository.findById(request.productId())
-                .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.PRODUCT_NOT_FOUND));
 
         Optional<Inventory> existingInventory = inventoryRepository.findByCinemaIdAndProductId(
                 request.cinemaId(), request.productId()
@@ -39,7 +41,7 @@ public class InventoryService {
             int newStock = inventory.getStockQuantity() + request.quantity();
 
             if (newStock < 1) {
-                throw new IllegalStateException("재고는 최소 1개 이상이어야 합니다. (현재 재고: " + inventory.getStockQuantity() + "개)");
+                throw new CustomException(ErrorCode.INVENTORY_SHORTAGE);
             }
 
             Inventory updatedInventory = Inventory.builder()
@@ -52,7 +54,7 @@ public class InventoryService {
         } else {
             // 처음 입고되는 상품일 경우
             if (request.quantity() < 1) {
-                throw new IllegalStateException("처음 입고되는 상품의 재고는 최소 1개 이상이어야 합니다.");
+                throw new CustomException(ErrorCode.INVENTORY_SHORTAGE);
             }
             Inventory newInventory = Inventory.builder()
                     .cinema(cinema)

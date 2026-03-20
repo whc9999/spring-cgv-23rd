@@ -7,6 +7,8 @@ import com.ceos23.cgv.domain.person.repository.PersonRepository;
 import com.ceos23.cgv.domain.photo.dto.PhotoCreateRequest;
 import com.ceos23.cgv.domain.photo.entity.Photo;
 import com.ceos23.cgv.domain.photo.repository.PhotoRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +32,13 @@ public class PhotoService {
         Movie movie = null;
         if (request.movieId() != null) {
             movie = movieRepository.findById(request.movieId())
-                    .orElseThrow(() -> new IllegalArgumentException("영화를 찾을 수 없습니다."));
+                    .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
         }
 
         Person person = null;
         if (request.personId() != null) {
             person = personRepository.findById(request.personId())
-                    .orElseThrow(() -> new IllegalArgumentException("인물을 찾을 수 없습니다."));
+                    .orElseThrow(() -> new CustomException(ErrorCode.PERSON_NOT_FOUND));
         }
 
         // 방어 로직: 둘 다 null이면 사진을 어디에 연결할지 알 수 없으므로 에러 처리

@@ -6,6 +6,8 @@ import com.ceos23.cgv.domain.movie.repository.MovieLikeRepository;
 import com.ceos23.cgv.domain.movie.repository.MovieRepository;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,9 +30,9 @@ public class MovieLikeService {
     @Transactional
     public String toggleMovieLike(Long userId, Long movieId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new IllegalArgumentException("영화를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
 
         // 기존에 찜을 눌렀는지 확인
         Optional<MovieLike> existingLike = movieLikeRepository.findByUserIdAndMovieId(userId, movieId);

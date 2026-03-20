@@ -8,6 +8,8 @@ import com.ceos23.cgv.domain.person.entity.Person;
 import com.ceos23.cgv.domain.person.entity.WorkParticipation;
 import com.ceos23.cgv.domain.person.repository.PersonRepository;
 import com.ceos23.cgv.domain.person.repository.WorkParticipationRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +46,7 @@ public class PersonService {
     @Transactional
     public WorkParticipation addWorkParticipation(WorkParticipationRequest request) {
         Movie movie = movieRepository.findById(request.movieId())
-                .orElseThrow(() -> new IllegalArgumentException("영화를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
 
         Person person = personRepository.findById(request.personId())
                 .orElseThrow(() -> new IllegalArgumentException("인물(배우/감독)을 찾을 수 없습니다."));

@@ -9,6 +9,8 @@ import com.ceos23.cgv.domain.reservation.enums.ReservationStatus;
 import com.ceos23.cgv.domain.reservation.repository.ReservationRepository;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,9 +33,9 @@ public class ReservationService {
     public Reservation createReservation(Long userId, Long screeningId, int peopleCount, Payment payment, String couponCode) {
         // 1. 엔티티 조회 (유저와 상영일정 존재하는지)
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         Screening screening = screeningRepository.findById(screeningId)
-                .orElseThrow(() -> new IllegalArgumentException("상영 일정을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.SCREENING_NOT_FOUND));
 
         // 2. 1인당 결제 금액 계산
         int ticketPrice = 15000; // 일반관 요금

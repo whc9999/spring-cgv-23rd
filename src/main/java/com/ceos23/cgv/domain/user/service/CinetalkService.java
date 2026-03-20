@@ -8,6 +8,8 @@ import com.ceos23.cgv.domain.user.entity.Cinetalk;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.repository.CinetalkRepository;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +33,7 @@ public class CinetalkService {
     public Cinetalk createCinetalk(Long userId, String content, Long movieId, Long cinemaId) {
         // 1. 작성자(User) 조회 (필수)
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         // 2. 영화(Movie)와 극장(Cinema) 조회 (선택적)
         Movie movie = null;

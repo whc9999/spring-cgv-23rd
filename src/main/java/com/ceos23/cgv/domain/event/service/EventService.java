@@ -7,6 +7,8 @@ import com.ceos23.cgv.domain.event.repository.EventRepository;
 import com.ceos23.cgv.domain.event.repository.MovieEventRepository;
 import com.ceos23.cgv.domain.movie.entity.Movie;
 import com.ceos23.cgv.domain.movie.repository.MovieRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,10 +45,10 @@ public class EventService {
     @Transactional
     public MovieEvent linkEventToMovie(Long eventId, Long movieId) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new IllegalArgumentException("이벤트를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.EVENT_NOT_FOUND));
 
         Movie movie = movieRepository.findById(movieId)
-                .orElseThrow(() -> new IllegalArgumentException("영화를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
 
         MovieEvent movieEvent = MovieEvent.builder()
                 .event(event)

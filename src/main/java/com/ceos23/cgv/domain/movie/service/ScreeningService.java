@@ -7,6 +7,8 @@ import com.ceos23.cgv.domain.movie.entity.Movie;
 import com.ceos23.cgv.domain.movie.entity.Screening;
 import com.ceos23.cgv.domain.movie.repository.MovieRepository;
 import com.ceos23.cgv.domain.movie.repository.ScreeningRepository;
+import com.ceos23.cgv.global.exception.CustomException;
+import com.ceos23.cgv.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,10 +30,10 @@ public class ScreeningService {
     @Transactional
     public Screening createScreening(ScreeningCreateRequest request) {
         Movie movie = movieRepository.findById(request.movieId())
-                .orElseThrow(() -> new IllegalArgumentException("영화를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.MOVIE_NOT_FOUND));
 
         Theater theater = theaterRepository.findById(request.theaterId())
-                .orElseThrow(() -> new IllegalArgumentException("상영관을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.THEATER_NOT_FOUND));
 
         Screening screening = Screening.builder()
                 .movie(movie)
