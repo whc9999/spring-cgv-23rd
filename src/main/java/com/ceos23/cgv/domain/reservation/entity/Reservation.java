@@ -47,4 +47,9 @@ public class Reservation extends BaseTimeEntity {
 
     @Column(nullable = false, unique = true, length = 50)
     private String saleNumber; // 예매 번호
+
+    // 예매 취소 메서드
+    public void cancel() {
+        this.status = ReservationStatus.CANCELED;
+    }
 }
