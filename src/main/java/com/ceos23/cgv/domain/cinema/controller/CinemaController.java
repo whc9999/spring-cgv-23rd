@@ -73,7 +73,8 @@ public class CinemaController {
                 cinemaId,
                 request.getName(),
                 request.getType(),
-                request.getSeatCount()
+                request.getMaxRow(),
+                request.getMaxCol()
         );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(TheaterResponse.from(createdTheater));
