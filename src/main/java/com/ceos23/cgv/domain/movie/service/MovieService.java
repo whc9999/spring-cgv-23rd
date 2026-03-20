@@ -1,6 +1,8 @@
 package com.ceos23.cgv.domain.movie.service;
 
 import com.ceos23.cgv.domain.movie.entity.Movie;
+import com.ceos23.cgv.domain.movie.enums.Genre;
+import com.ceos23.cgv.domain.movie.enums.MovieRating;
 import com.ceos23.cgv.domain.movie.repository.MovieRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -47,5 +49,44 @@ public class MovieService {
     public Movie getMovieDetails(Long movieId) {
         return movieRepository.findById(movieId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 영화를 찾을 수 없습니다."));
+    }
+
+    /**
+     * [POST] 새로운 영화 생성
+     */
+    @Transactional
+    public Movie createMovie(String title, int runningTime, LocalDate releaseDate,
+                             MovieRating movieRating, Genre genre, String prologue) {
+
+        Movie newMovie = Movie.builder()
+                .title(title)
+                .runningTime(runningTime)
+                .releaseDate(releaseDate)
+                .movieRating(movieRating)
+                .genre(genre)
+                .prologue(prologue)
+                .salesRate(0.0)
+                .build();
+
+        return movieRepository.save(newMovie);
+    }
+
+    /**
+     * [GET] 모든 영화 데이터 가져오기
+     */
+    public List<Movie> getAllMovies() {
+        return movieRepository.findAll();
+    }
+
+    /**
+     * [DELETE] 특정 영화 삭제
+     */
+    @Transactional
+    public void deleteMovie(Long movieId) {
+        // 영화가 존재하는지 먼저 확인
+        Movie movie = movieRepository.findById(movieId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 영화를 찾을 수 없습니다."));
+
+        movieRepository.delete(movie);
     }
 }
