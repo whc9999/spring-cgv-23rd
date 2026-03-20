@@ -46,13 +46,13 @@ public class ConcessionController {
     @Operation(summary = "매점 상품 등록", description = "새로운 매점 상품(팝콘, 콤보 등)을 DB에 등록합니다.")
     public ResponseEntity<ProductResponse> createProduct(@RequestBody ProductCreateRequest request) {
         Product createdProduct = concessionService.createProduct(
-                request.getName(),
-                request.getPrice(),
-                request.getDescription(),
-                request.getOrigin(),
-                request.getIngredient(),
-                request.getPickupPossible(),
-                request.getCategory()
+                request.name(),
+                request.price(),
+                request.description(),
+                request.origin(),
+                request.ingredient(),
+                request.pickupPossible(),
+                request.category()
         );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ProductResponse.from(createdProduct));

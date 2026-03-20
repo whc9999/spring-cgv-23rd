@@ -29,10 +29,10 @@ public class EventService {
     @Transactional
     public Event createEvent(EventCreateRequest request) {
         Event event = Event.builder()
-                .title(request.getTitle())
-                .content(request.getContent())
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
+                .title(request.title())
+                .content(request.content())
+                .startDate(request.startDate())
+                .endDate(request.endDate())
                 .build();
         return eventRepository.save(event);
     }

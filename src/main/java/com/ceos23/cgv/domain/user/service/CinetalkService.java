@@ -28,7 +28,7 @@ public class CinetalkService {
      * [POST] 씨네톡 게시글 작성
      */
     @Transactional
-    public Cinetalk createCinetalk(Long userId, String title, String content, Long movieId, Long cinemaId) {
+    public Cinetalk createCinetalk(Long userId, String content, Long movieId, Long cinemaId) {
         // 1. 작성자(User) 조회 (필수)
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
@@ -47,10 +47,9 @@ public class CinetalkService {
         // 3. 엔티티 생성 및 저장
         Cinetalk cinetalk = Cinetalk.builder()
                 .user(user)
-                .title(title)
                 .content(content)
-                .likeCount(0) // 초기 좋아요 수는 0
-                .movie(movie) // null이 들어가도 엔티티에서 허용해 두었으니 문제없음!
+                .likeCount(0)
+                .movie(movie)
                 .cinema(cinema)
                 .build();
 
@@ -62,5 +61,19 @@ public class CinetalkService {
      */
     public List<Cinetalk> getAllCinetalks() {
         return cinetalkRepository.findAll();
+    }
+
+    /**
+     * [GET] 특정 영화의 씨네톡 목록 조회
+     */
+    public List<Cinetalk> getCinetalksByMovieId(Long movieId) {
+        return cinetalkRepository.findByMovieId(movieId);
+    }
+
+    /**
+     * [GET] 특정 극장의 씨네톡 목록 조회
+     */
+    public List<Cinetalk> getCinetalksByCinemaId(Long cinemaId) {
+        return cinetalkRepository.findByCinemaId(cinemaId);
     }
 }

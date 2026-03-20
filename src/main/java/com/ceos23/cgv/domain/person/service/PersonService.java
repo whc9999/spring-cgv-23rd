@@ -29,11 +29,11 @@ public class PersonService {
     @Transactional
     public Person createPerson(PersonCreateRequest request) {
         Person person = Person.builder()
-                .type(request.getType())
-                .name(request.getName())
-                .englishName(request.getEnglishName())
-                .birthDate(request.getBirthDate())
-                .award(request.getAward())
+                .type(request.type())
+                .name(request.name())
+                .englishName(request.englishName())
+                .birthDate(request.birthDate())
+                .award(request.award())
                 .build();
         return personRepository.save(person);
     }
@@ -43,16 +43,16 @@ public class PersonService {
      */
     @Transactional
     public WorkParticipation addWorkParticipation(WorkParticipationRequest request) {
-        Movie movie = movieRepository.findById(request.getMovieId())
+        Movie movie = movieRepository.findById(request.movieId())
                 .orElseThrow(() -> new IllegalArgumentException("영화를 찾을 수 없습니다."));
 
-        Person person = personRepository.findById(request.getPersonId())
+        Person person = personRepository.findById(request.personId())
                 .orElseThrow(() -> new IllegalArgumentException("인물(배우/감독)을 찾을 수 없습니다."));
 
         WorkParticipation participation = WorkParticipation.builder()
                 .movie(movie)
                 .person(person)
-                .role(request.getRole())
+                .role(request.role())
                 .build();
 
         return workParticipationRepository.save(participation);

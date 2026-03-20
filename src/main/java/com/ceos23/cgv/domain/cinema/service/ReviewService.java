@@ -27,17 +27,17 @@ public class ReviewService {
      */
     @Transactional
     public Review createReview(ReviewCreateRequest request) {
-        User user = userRepository.findById(request.getUserId())
+        User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
 
-        Movie movie = movieRepository.findById(request.getMovieId())
+        Movie movie = movieRepository.findById(request.movieId())
                 .orElseThrow(() -> new IllegalArgumentException("영화를 찾을 수 없습니다."));
 
         Review review = Review.builder()
                 .user(user)
                 .movie(movie)
-                .type(request.getType())
-                .content(request.getContent())
+                .type(request.type())
+                .content(request.content())
                 .likeCount(0)
                 .build();
 

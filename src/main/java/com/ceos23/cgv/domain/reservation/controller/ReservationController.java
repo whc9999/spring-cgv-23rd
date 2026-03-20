@@ -24,11 +24,11 @@ public class ReservationController {
     public ResponseEntity<ReservationResponse> createReservation(@RequestBody ReservationCreateRequest request) {
 
         Reservation reservation = reservationService.createReservation(
-                request.getUserId(),
-                request.getScreeningId(),
-                request.getPeopleCount(),
-                request.getPayment(),
-                request.getCouponCode()
+                request.userId(),
+                request.screeningId(),
+                request.peopleCount(),
+                request.payment(),
+                request.couponCode()
         );
 
         return ResponseEntity.status(HttpStatus.CREATED)

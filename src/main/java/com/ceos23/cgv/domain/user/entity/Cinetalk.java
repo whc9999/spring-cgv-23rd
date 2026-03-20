@@ -18,14 +18,11 @@ public class Cinetalk extends BaseTimeEntity {
     @Column(name = "cinetalk_id")
     private Long id;
 
-    @Column(nullable = false, length = 20)
-    private String title;
-
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(nullable = false)
-    private int likeCount;
+    @Column(name = "like_count", nullable = false)
+    private int likeCount = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

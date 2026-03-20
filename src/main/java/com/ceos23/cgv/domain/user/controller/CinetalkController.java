@@ -26,11 +26,10 @@ public class CinetalkController {
     @Operation(summary = "씨네톡 게시글 작성", description = "영화나 극장을 선택(혹은 생략)하여 자유게시글을 작성합니다.")
     public ResponseEntity<CinetalkResponse> createCinetalk(@RequestBody CinetalkCreateRequest request) {
         Cinetalk cinetalk = cinetalkService.createCinetalk(
-                request.getUserId(),
-                request.getTitle(),
-                request.getContent(),
-                request.getMovieId(),
-                request.getCinemaId()
+                request.userId(),
+                request.content(),
+                request.movieId(),
+                request.cinemaId()
         );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(CinetalkResponse.from(cinetalk));
@@ -40,6 +39,24 @@ public class CinetalkController {
     @Operation(summary = "씨네톡 전체 목록 조회", description = "작성된 모든 씨네톡 게시글을 조회합니다.")
     public ResponseEntity<List<CinetalkResponse>> getAllCinetalks() {
         List<CinetalkResponse> responses = cinetalkService.getAllCinetalks().stream()
+                .map(CinetalkResponse::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/movie/{movieId}")
+    @Operation(summary = "특정 영화의 씨네톡 조회")
+    public ResponseEntity<List<CinetalkResponse>> getCinetalksByMovie(@PathVariable Long movieId) {
+        List<CinetalkResponse> responses = cinetalkService.getCinetalksByMovieId(movieId).stream()
+                .map(CinetalkResponse::from)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/cinema/{cinemaId}")
+    @Operation(summary = "특정 극장의 씨네톡 조회", description = "특정 극장에 작성된 씨네톡 게시글 목록을 조회합니다.")
+    public ResponseEntity<List<CinetalkResponse>> getCinetalksByCinema(@PathVariable Long cinemaId) {
+        List<CinetalkResponse> responses = cinetalkService.getCinetalksByCinemaId(cinemaId).stream()
                 .map(CinetalkResponse::from)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);

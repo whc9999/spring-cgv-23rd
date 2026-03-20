@@ -27,13 +27,14 @@ public class MovieController {
     @Operation(summary = "새로운 영화 등록", description = "영화 정보를 입력받아 DB에 생성합니다.")
     public ResponseEntity<MovieResponse> createMovie(@RequestBody MovieCreateRequest request) {
         Movie createdMovie = movieService.createMovie(
-                request.getTitle(),
-                request.getRunningTime(),
-                request.getReleaseDate(),
-                request.getMovieRating(),
-                request.getGenre(),
-                request.getPrologue()
+                request.title(),
+                request.runningTime(),
+                request.releaseDate(),
+                request.movieRating(),
+                request.genre(),
+                request.prologue()
         );
+
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(MovieResponse.from(createdMovie));
     }

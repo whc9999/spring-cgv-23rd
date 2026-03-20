@@ -55,28 +55,23 @@ public class CinemaController {
     @Operation(summary = "영화관(지점) 생성", description = "새로운 CGV 지점(예: 강남점)을 등록합니다.")
     public ResponseEntity<CinemaResponse> createCinema(@RequestBody CinemaCreateRequest request) {
         Cinema createdCinema = cinemaService.createCinema(
-                request.getName(),
-                request.getRegion()
+                request.name(),
+                request.region()
         );
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(CinemaResponse.from(createdCinema));
+        return ResponseEntity.status(HttpStatus.CREATED).body(CinemaResponse.from(createdCinema));
     }
 
     // 5. 상영관 생성 (POST)
     @PostMapping("/{cinemaId}/theaters")
     @Operation(summary = "상영관 생성", description = "특정 영화관 지점에 새로운 상영관(예: 1관, IMAX관)을 등록합니다.")
-    public ResponseEntity<TheaterResponse> createTheater(
-            @PathVariable Long cinemaId,
-            @RequestBody TheaterCreateRequest request) {
-
+    public ResponseEntity<TheaterResponse> createTheater(@RequestBody TheaterCreateRequest request) {
         Theater createdTheater = cinemaService.createTheater(
-                cinemaId,
-                request.getName(),
-                request.getType(),
-                request.getMaxRow(),
-                request.getMaxCol()
+                request.cinemaId(),
+                request.name(),
+                request.type(),
+                request.maxRow(),
+                request.maxCol()
         );
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(TheaterResponse.from(createdTheater));
+        return ResponseEntity.status(HttpStatus.CREATED).body(TheaterResponse.from(createdTheater));
     }
 }

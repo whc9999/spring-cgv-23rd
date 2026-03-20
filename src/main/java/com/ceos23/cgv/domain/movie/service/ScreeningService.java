@@ -27,18 +27,18 @@ public class ScreeningService {
      */
     @Transactional
     public Screening createScreening(ScreeningCreateRequest request) {
-        Movie movie = movieRepository.findById(request.getMovieId())
+        Movie movie = movieRepository.findById(request.movieId())
                 .orElseThrow(() -> new IllegalArgumentException("영화를 찾을 수 없습니다."));
 
-        Theater theater = theaterRepository.findById(request.getTheaterId())
+        Theater theater = theaterRepository.findById(request.theaterId())
                 .orElseThrow(() -> new IllegalArgumentException("상영관을 찾을 수 없습니다."));
 
         Screening screening = Screening.builder()
                 .movie(movie)
                 .theater(theater)
-                .startTime(request.getStartTime())
-                .endTime(request.getEndTime())
-                .isMorning(request.getIsMorning())
+                .startTime(request.startTime())
+                .endTime(request.endTime())
+                .isMorning(request.isMorning())
                 .build();
 
         return screeningRepository.save(screening);

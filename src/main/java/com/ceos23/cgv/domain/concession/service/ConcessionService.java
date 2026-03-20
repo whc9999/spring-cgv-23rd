@@ -42,40 +42,34 @@ public class ConcessionService {
     @Transactional
     public FoodOrder createOrder(FoodOrderRequest request) {
         // 1. 유저와 픽업할 영화관 지점 조회
-        User user = userRepository.findById(request.getUserId())
+        User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
-        Cinema cinema = cinemaRepository.findById(request.getCinemaId())
+        Cinema cinema = cinemaRepository.findById(request.cinemaId())
                 .orElseThrow(() -> new IllegalArgumentException("영화관 지점을 찾을 수 없습니다."));
 
-        // 2. 총 결제 금액 계산을 위한 변수
         int calculatedTotalPrice = 0;
 
-        // 3. 주문(FoodOrder) 엔티티 먼저 생성 (아직 총액은 0원으로 임시 세팅)
         FoodOrder foodOrder = FoodOrder.builder()
                 .user(user)
                 .cinema(cinema)
                 .totalPrice(0)
                 .build();
-        foodOrderRepository.save(foodOrder); // OrderItem과 연결하기 위해 먼저 저장(ID 발급)
+        foodOrderRepository.save(foodOrder);
 
-        // 4. 장바구니에 담긴 아이템(OrderItem)들을 하나씩 꺼내서 처리
-        for (FoodOrderRequest.OrderItemRequest itemReq : request.getOrderItems()) {
-            Product product = productRepository.findById(itemReq.getProductId())
+        for (FoodOrderRequest.OrderItemRequest itemReq : request.orderItems()) {
+            Product product = productRepository.findById(itemReq.productId())
                     .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다."));
 
-            // 개별 아이템 가격 누적
-            calculatedTotalPrice += (product.getPrice() * itemReq.getQuantity());
+            calculatedTotalPrice += (product.getPrice() * itemReq.quantity());
 
-            // OrderItem 엔티티 생성 및 저장
             OrderItem orderItem = OrderItem.builder()
                     .foodOrder(foodOrder)
                     .product(product)
-                    .quantity(itemReq.getQuantity())
+                    .quantity(itemReq.quantity())
                     .build();
             orderItemRepository.save(orderItem);
         }
 
-        // 5. 최종 계산된 총액을 FoodOrder에 업데이트
         FoodOrder finalOrder = FoodOrder.builder()
                 .id(foodOrder.getId())
                 .user(user)

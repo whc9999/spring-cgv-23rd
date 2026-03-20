@@ -28,14 +28,14 @@ public class PhotoService {
     @Transactional
     public Photo createPhoto(PhotoCreateRequest request) {
         Movie movie = null;
-        if (request.getMovieId() != null) {
-            movie = movieRepository.findById(request.getMovieId())
+        if (request.movieId() != null) {
+            movie = movieRepository.findById(request.movieId())
                     .orElseThrow(() -> new IllegalArgumentException("영화를 찾을 수 없습니다."));
         }
 
         Person person = null;
-        if (request.getPersonId() != null) {
-            person = personRepository.findById(request.getPersonId())
+        if (request.personId() != null) {
+            person = personRepository.findById(request.personId())
                     .orElseThrow(() -> new IllegalArgumentException("인물을 찾을 수 없습니다."));
         }
 
@@ -47,7 +47,7 @@ public class PhotoService {
         Photo photo = Photo.builder()
                 .movie(movie)
                 .person(person)
-                .name(request.getName())
+                .name(request.name())
                 .build();
 
         return photoRepository.save(photo);
