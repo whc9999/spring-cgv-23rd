@@ -29,7 +29,7 @@ public class Review extends BaseTimeEntity {
     private TheaterType type; // 상영관 종류
 
     @Column(nullable = false)
-    private int like_count;
+    private int likeCount;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

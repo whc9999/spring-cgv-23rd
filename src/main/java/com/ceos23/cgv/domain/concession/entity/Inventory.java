@@ -19,7 +19,7 @@ public class Inventory {
 
     @Min(value = 1, message = "재고는 최소 1개 이상입니다.")
     @Column(nullable = false)
-    private String stockQuantity;
+    private int stockQuantity;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cinema_id", nullable = false)

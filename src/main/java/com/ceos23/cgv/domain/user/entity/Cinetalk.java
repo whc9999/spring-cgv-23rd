@@ -2,6 +2,7 @@ package com.ceos23.cgv.domain.user.entity;
 
 import com.ceos23.cgv.domain.cinema.entity.Cinema;
 import com.ceos23.cgv.domain.movie.entity.Movie;
+import com.ceos23.cgv.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -11,7 +12,7 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class Cinetalk {
+public class Cinetalk extends BaseTimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "cinetalk_id")
