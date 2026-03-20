@@ -653,7 +653,8 @@ CGV는 영화 관람을 중심으로 다양한 기능을 제공하는 복합 플
 
     - 확장 시 마이그레이션 필요 (트레이드오프)
 
-![CGV.png](attachment:7caeb9af-36d4-4303-aab9-bcf5f4ef1d5f:CGV.png)
+<img width="2860" height="1892" alt="image" src="https://github.com/user-attachments/assets/e3baf6d9-ca74-43c1-be06-7ed91c85bb58" />
+
 
 https://www.erdcloud.com/d/PhXPysc9AfrTJbSYq
 
