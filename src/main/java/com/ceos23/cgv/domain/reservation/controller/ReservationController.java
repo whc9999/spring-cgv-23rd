@@ -46,8 +46,9 @@ public class ReservationController {
     @Operation(summary = "영화 예매 취소", description = "예매 ID와 유저 ID를 받아 본인의 예매 내역을 취소(CANCELED) 상태로 변경합니다.")
     public ResponseEntity<ApiResponse<String>> cancelReservation(
             @PathVariable Long reservationId,
-            @RequestParam Long userId) {
+            @AuthenticationPrincipal UserDetails userDetails) {
 
+        Long userId = Long.parseLong(userDetails.getUsername());
         reservationService.cancelReservation(userId, reservationId);
 
         return ResponseEntity.ok(ApiResponse.success("예매가 성공적으로 취소되었습니다."));
