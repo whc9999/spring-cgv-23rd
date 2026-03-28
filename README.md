@@ -658,3 +658,115 @@ CGV는 영화 관람을 중심으로 다양한 기능을 제공하는 복합 플
 
 https://www.erdcloud.com/d/PhXPysc9AfrTJbSYq
 
+<details>
+<summary><h2>1️⃣ JWT 인증(Authentication) 방법에 대해서 알아보기</h2></summary>
+<div markdown="1">
+
+<br>
+
+<details>
+<summary><b>JWT를 이용한 인증 방식(액세스토큰, 리프레쉬 토큰)에 대해서 조사해보아요</b></summary>
+<div markdown="1">
+
+- **개념**: 사용자를 인증하고 식별하기 위한 정보를 암호화시킨 토큰입니다. 별도의 세션 저장소 없이 토큰 자체로 검증이 가능하여 Stateless한 현대 웹에서 널리 쓰입니다.
+- **구조**: `Header`(타입 및 알고리즘) + `Payload`(클레임 정보, 유저 ID, 만료일시 등) + `Signature`(위변조 검증용 서명)
+
+<img width="1050" height="207" alt="Image" src="https://github.com/user-attachments/assets/8073950e-0be3-4370-9dbf-cce1e1123a68" />
+
+- **토큰의 종류**:
+    - **Access Token**: 실제 서버 자원을 요청할 때 헤더에 실어 보내는 수명이 짧은 토큰입니다.
+    - **Refresh Token**: Access Token이 만료되었을 때, 새 Access Token을 발급받기 위한 수명이 긴 토큰입니다. (보안을 위해 주로 DB에 저장)
+
+**🔄 JWT 인증 흐름**
+1. **로그인**: 사용자가 로그인을 요청하면 서버가 회원 DB를 대조하여 확인합니다.
+2. **토큰 발급**: 유효기간이 짧은 `Access Token`과 긴 `Refresh Token`을 함께 생성하여 응답합니다.
+3. **API 요청**: 클라이언트는 매 API 요청 시 헤더에 `Access Token`을 담아 보냅니다.
+4. **만료 및 재발급**: `Access Token`이 만료되어 401(Unauthorized) 에러를 받으면, 보관해둔 `Refresh Token`을 서버로 보내 유효성 검증 후 새로운 `Access Token`을 발급받아 통신을 재개합니다.
+
+<img width="820" height="382" alt="Image" src="https://github.com/user-attachments/assets/9a7759d1-b631-46f3-bb10-f6870cf0b4dc" />
+
+**✅ 장단점**
+- **장점**: 세션 저장소가 필요 없어 서버 자원을 절약하고 확장에 유리합니다. 짧은 수명의 Access Token과 긴 수명의 Refresh Token을 조합해 보안과 사용자 편의성(자동 로그인 유지)을 모두 챙길 수 있습니다.
+- **단점**: 한 번 발급된 토큰은 임의로 강제 만료시키기 어렵고, Payload 자체는 누구나 디코딩할 수 있어 민감한 정보를 담을 수 없습니다.
+
+</div>
+</details>
+
+<br>
+
+<details>
+<summary><b>추가로 세션, 쿠키, OAuth 등 다른 방식도 조사해보아요</b></summary>
+<div markdown="1">
+
+**🍪 쿠키(Cookie) 인증**
+- **특징**: 브라우저에 저장되는 Key-Value 형태의 문자열입니다. 한 번 설정되면 이후 매 요청마다 브라우저가 자동으로 헤더에 담아 보냅니다.
+- **한계**: 용량이 4KB로 제한적이며, 네트워크 상에 값이 그대로 노출되어 보안에 매우 취약합니다.
+
+**🗄️ 세션(Session) 인증**
+- **특징**: 비밀번호 같은 민감한 정보는 서버(메모리/DB)에 저장하고, 클라이언트에게는 출입증 역할의 무의미한 고유 식별자(`Session ID`)만 쿠키에 담아 발급합니다.
+- **장/단점**: 쿠키 자체에 유의미한 개인정보가 없어 훨씬 안전하지만, 동시 접속자가 많아질수록 서버의 저장 공간과 메모리 부하가 심해집니다. 또한 '세션 하이재킹' 공격의 위험이 있습니다.
+
+**🔐 OAuth 2.0 인증**
+- **특징**: 사용자가 비밀번호를 우리 서비스에 직접 제공하지 않고, 구글/카카오 같은 외부의 신뢰할 수 있는 서비스의 인증 및 권한을 위임받아 사용하는 범용 프로토콜입니다.
+- **장점**: 사용자는 일일이 회원가입을 할 필요 없이 안전하게 서비스를 이용할 수 있으며, 서비스 개발자는 복잡한 보안 처리를 거대 플랫폼에 위임할 수 있어 더욱 안전합니다.
+
+</div>
+</details>
+
+</div>
+</details>
+
+<details>
+<summary><h2>2️⃣ 액세스 토큰 발급 및 검증 로직 구현하기</h2></summary>
+<div markdown="1">
+
+<br>
+
+- **`TokenProvider` 구현**: `io.jsonwebtoken` 라이브러리를 활용하여 Access 및 Refresh Token 생성, 서명(Signature) 검증 로직을 구현했습니다.
+- **DB 조회 최소화 (최적화)**: `getAuthentication` 호출 시 매번 DB를 찌르지 않고, **토큰의 Payload에 담긴 유저 식별자(ID)와 권한 정보(Role)만을 이용해 Authentication 객체를 생성**하도록 최적화하여 Stateless한 JWT의 장점을 극대화했습니다.
+- **`JwtAuthenticationFilter` 적용**: 헤더(`Authorization`)에서 토큰을 추출해 유효성을 검증한 뒤, 정상 토큰인 경우 `SecurityContextHolder`에 인증 정보를 저장하는 커스텀 필터를 구현했습니다.
+
+</div>
+</details>
+
+<details>
+<summary><h2>3️⃣ 회원가입 및 로그인 API 구현하고 테스트하기</h2></summary>
+<div markdown="1">
+
+<br>
+
+- **비밀번호 암호화**: 회원가입 API 호출 시 `BCryptPasswordEncoder`를 통해 평문 비밀번호를 단방향 암호화하여 DB에 안전하게 저장합니다.
+- **로그인 및 토큰 발급**: 로그인 시 `AuthenticationManager`를 통해 계정을 검증하고, 성공 시 `TokenProvider`를 거쳐 Access Token과 Refresh Token을 동시 발급합니다.
+  <img width="670" height="569" alt="Image" src="https://github.com/user-attachments/assets/84876572-179f-4ec3-9e12-4927a20b4c00" />
+
+</div>
+</details>
+
+<details>
+<summary><h2>4️⃣ 토큰이 필요한 API 1개 이상 구현하고 테스트하기</h2></summary>
+<div markdown="1">
+
+<br>
+
+- **URL 접근 권한 제어**: 관리자(ADMIN)와 일반 사용자(USER)의 권한(`Role`)을 Enum으로 분리하고, `SecurityConfig`를 통해 `/api/admin/**` 등 경로별 접근 권한을 제어했습니다.
+  <img width="814" height="465" alt="Image" src="https://github.com/user-attachments/assets/12242bf1-b371-489d-981d-94222a943c04" />
+- **API 보안 개선**: 기존에 Request 파라미터나 바디로 직접 유저 ID를 입력받던 취약한 구조를 개선했습니다. `ReservationController`(예매, 예매 취소) 등에서 `@AuthenticationPrincipal`을 사용해 **검증된 JWT 토큰에서 안전하게 유저 식별자를 추출**해 비즈니스 로직을 처리하도록 리팩토링했습니다.
+  <img width="665" height="683" alt="Image" src="https://github.com/user-attachments/assets/477eb54b-da7c-4840-929a-48483d845b30" />
+
+</div>
+</details>
+
+<details>
+<summary><h2>5️⃣(도전 미션~!) 리프레쉬 토큰 발급 로직 구현하고 테스트하기</h2></summary>
+<div markdown="1">
+
+<br>
+
+보안과 사용자 편의성을 모두 잡기 위해 Refresh Token 시스템을 도입했습니다.
+- **DB 저장**: 로그인 시 발급된 긴 수명의 Refresh Token을 DB(`User` 엔티티)에 저장합니다.
+- **재발급(Reissue) API 구현**: 토큰이 만료되었을 때 클라이언트가 Refresh Token을 보내면, DB에 저장된 토큰과 대조하여 일치할 경우에만 새로운 토큰을 발급합니다.
+- **RTR (Refresh Token Rotation) 기법 적용**: 토큰 재발급 시 Access Token뿐만 아니라 **Refresh Token도 함께 새로 발급하고 DB를 갱신**합니다. 이를 통해 Refresh Token이 탈취되더라도 한 번 사용되면 폐기되도록 보안을 한층 강화했습니다.
+  <img width="673" height="552" alt="Image" src="https://github.com/user-attachments/assets/ad9cbc21-fbb3-4c9f-9783-73f240caf68d" />
+
+</div>
+</details>
