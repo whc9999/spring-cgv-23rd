@@ -117,4 +117,16 @@ public class TokenProvider implements InitializingBean {
         }
         return false;
     }
+
+    // 리프레쉬 토큰 생성 메서드
+    public String createRefreshToken(Long id) {
+        long now = (new Date()).getTime();
+        Date validity = new Date(now + this.tokenValidityInMilliseconds * 24 * 14); // 14일
+
+        return Jwts.builder()
+                .setSubject(String.valueOf(id))
+                .signWith(key, SignatureAlgorithm.HS512)
+                .setExpiration(validity)
+                .compact();
+    }
 }

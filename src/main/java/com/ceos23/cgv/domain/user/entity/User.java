@@ -44,4 +44,16 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false, length = 20)
     @Builder.Default
     private Role role = Role.ROLE_USER;
+
+    @Column(length = 500)
+    private String refreshToken;
+
+    // 토큰 업데이트 및 삭제용 메서드
+    public void updateRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
+    }
+
+    public void destroyRefreshToken() {
+        this.refreshToken = null;
+    }
 }

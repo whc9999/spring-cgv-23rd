@@ -1,9 +1,6 @@
 package com.ceos23.cgv.domain.auth.controller;
 
-import com.ceos23.cgv.domain.auth.dto.LoginRequest;
-import com.ceos23.cgv.domain.auth.dto.SignupRequest;
-import com.ceos23.cgv.domain.auth.dto.TokenResponse;
-import com.ceos23.cgv.domain.auth.dto.UserResponse;
+import com.ceos23.cgv.domain.auth.dto.*;
 import com.ceos23.cgv.domain.auth.service.AuthService;
 import com.ceos23.cgv.global.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +30,13 @@ public class AuthController {
     public ResponseEntity<ApiResponse<TokenResponse>> login(@RequestBody LoginRequest request) {
         TokenResponse tokenResponse = authService.login(request);
         // 클라이언트에게 토큰을 JSON 바디 또는 쿠키로 전달
+        return ResponseEntity.ok(ApiResponse.success(tokenResponse));
+    }
+
+    // 3. 토큰 재발급 (Access Token이 만료되었을 때 호출)
+    @PostMapping("/reissue")
+    public ResponseEntity<ApiResponse<TokenResponse>> reissue(@RequestBody ReissueRequest request) {
+        TokenResponse tokenResponse = authService.reissue(request);
         return ResponseEntity.ok(ApiResponse.success(tokenResponse));
     }
 }

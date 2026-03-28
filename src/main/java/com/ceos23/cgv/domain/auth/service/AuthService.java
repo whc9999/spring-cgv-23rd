@@ -1,9 +1,6 @@
 package com.ceos23.cgv.domain.auth.service;
 
-import com.ceos23.cgv.domain.auth.dto.LoginRequest;
-import com.ceos23.cgv.domain.auth.dto.SignupRequest;
-import com.ceos23.cgv.domain.auth.dto.TokenResponse;
-import com.ceos23.cgv.domain.auth.dto.UserResponse;
+import com.ceos23.cgv.domain.auth.dto.*;
 import com.ceos23.cgv.domain.user.entity.User;
 import com.ceos23.cgv.domain.user.enums.Role;
 import com.ceos23.cgv.domain.user.repository.UserRepository;
@@ -52,26 +49,61 @@ public class AuthService {
     }
 
     /**
-     * 로그인 및 토큰 발급 로직
+     * 로그인 로직
      */
     @Transactional
     public TokenResponse login(LoginRequest request) {
-        // 1. Login 이메일/비밀번호를 기반으로 Authentication 객체 생성
-        // 이때 authentication은 인증 여부를 확인하는 authenticated 값이 false인 상태입니다.
         UsernamePasswordAuthenticationToken authenticationToken =
                 new UsernamePasswordAuthenticationToken(request.email(), request.password());
 
-        // 2. 실제 비밀번호 검증이 이루어지는 부분
-        // authenticate 메서드가 실행될 때 CustomUserDetailsService의 loadUserByUsername 메서드가 실행됩니다.
-        Authentication authentication =
-                authenticationManager.authenticate(authenticationToken);
-
-        // 3. 인증 정보를 기반으로 JWT 토큰 생성
-        // (저희는 TokenProvider에서 ID값을 기반으로 토큰을 만들도록 설계했습니다)
+        Authentication authentication = authenticationManager.authenticate(authenticationToken);
         Long userId = Long.parseLong(authentication.getName());
-        String accessToken = tokenProvider.createAccessToken(userId, authentication);
 
-        // 4. 발급된 토큰을 Response DTO에 담아 반환
-        return new TokenResponse(accessToken);
+        String accessToken = tokenProvider.createAccessToken(userId, authentication);
+        String refreshToken = tokenProvider.createRefreshToken(userId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+        user.updateRefreshToken(refreshToken);
+
+        return new TokenResponse(accessToken, refreshToken);
+    }
+
+    /**
+     * 토큰 재발급 로직
+     */
+    @Transactional
+    public TokenResponse reissue(ReissueRequest request) {
+        String refreshToken = request.refreshToken();
+
+        // 1. Refresh Token 자체의 유효성 검증
+        if (!tokenProvider.validateAccessToken(refreshToken)) {
+            throw new IllegalArgumentException("유효하지 않거나 만료된 Refresh Token 입니다.");
+        }
+
+        // 2. 토큰에서 유저 ID 추출
+        Long userId = Long.parseLong(tokenProvider.getTokenUserId(refreshToken));
+
+        // 3. DB에서 유저를 찾고, DB에 저장된 토큰과 클라이언트가 보낸 토큰이 일치하는지 대조
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("유저를 찾을 수 없습니다."));
+
+        if (!refreshToken.equals(user.getRefreshToken())) {
+            throw new IllegalArgumentException("토큰 정보가 일치하지 않습니다. (탈취 의심)");
+        }
+
+        // 4. 검증을 통과했다면 새로운 토큰들을 생성
+        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                String.valueOf(user.getId()), "",
+                java.util.Collections.singleton(new org.springframework.security.core.authority.SimpleGrantedAuthority(user.getRole().name()))
+        );
+
+        String newAccessToken = tokenProvider.createAccessToken(userId, authentication);
+        String newRefreshToken = tokenProvider.createRefreshToken(userId); // RTR 사용 (리프레쉬 토큰도 새로 발급)
+
+        // 5. DB의 Refresh Token 업데이트
+        user.updateRefreshToken(newRefreshToken);
+
+        return new TokenResponse(newAccessToken, newRefreshToken);
     }
 }
