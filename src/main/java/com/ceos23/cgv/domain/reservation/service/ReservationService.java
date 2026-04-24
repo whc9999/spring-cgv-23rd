@@ -7,7 +7,7 @@ import com.ceos23.cgv.domain.reservation.dto.ReservedSeatRequest;
 import com.ceos23.cgv.domain.reservation.entity.Reservation;
 import com.ceos23.cgv.domain.reservation.entity.ReservedSeat;
 import com.ceos23.cgv.domain.reservation.enums.Payment;
-import com.ceos23.cgv.domain.reservation.policy.CouponDiscountPolicy;
+import com.ceos23.cgv.domain.reservation.policy.ReservationPricePolicy;
 import com.ceos23.cgv.domain.reservation.repository.ReservationRepository;
 import com.ceos23.cgv.domain.reservation.repository.ReservedSeatRepository;
 import com.ceos23.cgv.domain.user.entity.User;
@@ -33,9 +33,6 @@ public class ReservationService {
     private final ReservedSeatRepository reservedSeatRepository;
     private final PaymentService paymentService;
     private final TransactionTemplate transactionTemplate;
-
-    // 전역적으로 관리할 할인 금액 상수 선언
-    private static final int MORNING_DISCOUNT = 4000;
 
     public ReservationService(ReservationRepository reservationRepository,
                               UserRepository userRepository,
@@ -83,7 +80,7 @@ public class ReservationService {
         User user = findUser(userId);
         Screening screening = findScreening(screeningId);
         validateSeats(peopleCount, seats);
-        int calculatedPrice = calculatePrice(screening, peopleCount, couponCode);
+        int calculatedPrice = ReservationPricePolicy.calculate(screening, peopleCount, couponCode);
 
         Reservation reservation = Reservation.create(
                 user,
@@ -145,23 +142,6 @@ public class ReservationService {
         if (seats == null || seats.isEmpty() || seats.size() != peopleCount) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
         }
-    }
-
-    private int calculatePrice(Screening screening, int peopleCount, String couponCode) {
-        int ticketPrice = calculateTicketPrice(screening);
-        int calculatedPrice = ticketPrice * peopleCount;
-
-        return CouponDiscountPolicy.apply(calculatedPrice, couponCode);
-    }
-
-    private int calculateTicketPrice(Screening screening) {
-        int ticketPrice = screening.getTheater().getType().getBasePrice();
-
-        if (Boolean.TRUE.equals(screening.getIsMorning())) {
-            return ticketPrice - MORNING_DISCOUNT;
-        }
-
-        return ticketPrice;
     }
 
     private String createSaleNumber() {

@@ -3,8 +3,10 @@ package com.ceos23.cgv.global.security;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -20,7 +22,11 @@ import java.util.Date;
 import java.util.stream.Collectors;
 
 @Component
+@Slf4j
 public class TokenProvider implements InitializingBean {
+
+    private static final String BEARER_PREFIX = "Bearer ";
+    private static final long REFRESH_TOKEN_VALIDITY_MULTIPLIER = 24L * 14L;
 
     private final String secret;
     private final long tokenValidityInMilliseconds;
@@ -44,9 +50,9 @@ public class TokenProvider implements InitializingBean {
 
     // 1. HttpServletRequest에서 토큰 추출
     public String getAccessToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7);
+        String bearerToken = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
+            return bearerToken.substring(BEARER_PREFIX.length());
         }
         return null;
     }
@@ -100,7 +106,7 @@ public class TokenProvider implements InitializingBean {
                 authorities
         );
 
-        return new UsernamePasswordAuthenticationToken(principal, token, authorities);
+        return new UsernamePasswordAuthenticationToken(principal, null, authorities);
     }
 
     // 5. 토큰 유효성 검증
@@ -109,11 +115,11 @@ public class TokenProvider implements InitializingBean {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
             return true;
         } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
-            // 잘못된 JWT 서명
+            log.warn("Invalid JWT signature. type={}, message={}", e.getClass().getSimpleName(), e.getMessage());
         } catch (ExpiredJwtException e) {
-            // 만료된 JWT
+            log.warn("Expired JWT. type={}, message={}", e.getClass().getSimpleName(), e.getMessage());
         } catch (UnsupportedJwtException | IllegalArgumentException e) {
-            // 지원되지 않거나 잘못된 JWT
+            log.warn("Invalid JWT. type={}, message={}", e.getClass().getSimpleName(), e.getMessage());
         }
         return false;
     }
@@ -121,12 +127,16 @@ public class TokenProvider implements InitializingBean {
     // 리프레쉬 토큰 생성 메서드
     public String createRefreshToken(Long id) {
         long now = (new Date()).getTime();
-        Date validity = new Date(now + this.tokenValidityInMilliseconds * 24 * 14); // 14일
+        Date validity = new Date(now + this.tokenValidityInMilliseconds * REFRESH_TOKEN_VALIDITY_MULTIPLIER);
 
         return Jwts.builder()
                 .setSubject(String.valueOf(id))
                 .signWith(key, SignatureAlgorithm.HS512)
                 .setExpiration(validity)
                 .compact();
+    }
+
+    public long getRefreshTokenValidityInSeconds() {
+        return tokenValidityInMilliseconds / 1000 * REFRESH_TOKEN_VALIDITY_MULTIPLIER;
     }
 }

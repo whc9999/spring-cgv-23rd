@@ -40,7 +40,7 @@ public class AuthService {
     }
 
     private void validateSignupRequest(SignupRequest request) {
-        if (userRepository.findByEmail(request.email()).isPresent()) {
+        if (userRepository.existsByEmail(request.email())) {
             throw new CustomException(ErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
@@ -62,34 +62,32 @@ public class AuthService {
      * 로그인 로직
      */
     @Transactional
-    public TokenResponse login(LoginRequest request) {
+    public TokenPair login(LoginRequest request) {
         Authentication authentication = authenticate(request.email(), request.password());
         Long userId = Long.parseLong(authentication.getName());
 
-        TokenResponse tokenResponse = issueTokens(userId, authentication);
+        TokenPair tokenPair = issueTokens(userId, authentication);
         User user = findUser(userId);
-        user.updateRefreshToken(tokenResponse.refreshToken());
+        user.updateRefreshToken(tokenPair.refreshToken());
 
-        return tokenResponse;
+        return tokenPair;
     }
 
     /**
      * 토큰 재발급 로직
      */
     @Transactional
-    public TokenResponse reissue(ReissueRequest request) {
-        String refreshToken = request.refreshToken();
-
+    public TokenPair reissue(String refreshToken) {
         validateRefreshToken(refreshToken);
         Long userId = Long.parseLong(tokenProvider.getTokenUserId(refreshToken));
         User user = findUser(userId);
         validateStoredRefreshToken(user, refreshToken);
 
         Authentication authentication = createAuthentication(user);
-        TokenResponse tokenResponse = issueTokens(userId, authentication);
-        user.updateRefreshToken(tokenResponse.refreshToken());
+        TokenPair tokenPair = issueTokens(userId, authentication);
+        user.updateRefreshToken(tokenPair.refreshToken());
 
-        return tokenResponse;
+        return tokenPair;
     }
 
     private Authentication authenticate(String email, String password) {
@@ -105,6 +103,10 @@ public class AuthService {
     }
 
     private void validateRefreshToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
         if (!tokenProvider.validateAccessToken(refreshToken)) {
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
@@ -124,10 +126,10 @@ public class AuthService {
         );
     }
 
-    private TokenResponse issueTokens(Long userId, Authentication authentication) {
+    private TokenPair issueTokens(Long userId, Authentication authentication) {
         String accessToken = tokenProvider.createAccessToken(userId, authentication);
         String refreshToken = tokenProvider.createRefreshToken(userId);
 
-        return new TokenResponse(accessToken, refreshToken);
+        return new TokenPair(accessToken, refreshToken, tokenProvider.getRefreshTokenValidityInSeconds());
     }
 }

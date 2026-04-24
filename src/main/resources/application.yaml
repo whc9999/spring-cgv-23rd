@@ -21,7 +21,7 @@ spring:
       org.hibernate.SQL: debug
 
 jwt:
-  secret: cGUxq8+7npM2ivr6ge6xjVttZDAod9XD+Qlbyn1jFqUajswLXoFHfbHXdn75FGhPDw1aEAwkwpcfJl8SaFafHA==
+  secret: ${JWT_SECRET}
   token-validity-in-seconds: 3600
 
 payment:
