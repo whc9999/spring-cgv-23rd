@@ -44,7 +44,7 @@ public class ReservedSeatService {
     }
 
     private Screening findScreening(Long screeningId) {
-        return screeningRepository.findById(screeningId)
+        return screeningRepository.findByIdForUpdate(screeningId)
                 .orElseThrow(() -> new CustomException(ErrorCode.SCREENING_NOT_FOUND));
     }
 

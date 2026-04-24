@@ -23,7 +23,7 @@ public class ReservationController {
     private final ReservationService reservationService;
 
     @PostMapping
-    @Operation(summary = "영화 예매하기", description = "유저, 상영 일정, 인원수, 결제 수단 등을 입력받아 예매를 진행합니다.")
+    @Operation(summary = "영화 예매하기", description = "상영 일정, 인원수, 결제 수단, 좌석 정보를 입력받아 예매를 진행합니다.")
     public ResponseEntity<ApiResponse<ReservationResponse>> createReservation(
             @RequestBody ReservationCreateRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -35,7 +35,8 @@ public class ReservationController {
                 request.screeningId(),
                 request.peopleCount(),
                 request.payment(),
-                request.couponCode()
+                request.couponCode(),
+                request.seats()
         );
 
         return ResponseEntity.status(HttpStatus.CREATED)

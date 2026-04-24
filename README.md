@@ -55,6 +55,97 @@ CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 </details>
 
 <details>
+<summary>동시성 문제와 해결 방법</summary>
+
+## 동시성 문제가 발생할 수 있는 상황
+
+Spring은 일반적으로 요청마다 별도 스레드가 처리되는 Thread Per Request 방식으로 동작한다. 따라서 여러 사용자가 같은 상영 회차의 같은 좌석을 동시에 예매하면 같은 공유 자원에 동시에 접근할 수 있다.
+
+기존 좌석 예매 흐름은 `Reservation` 생성과 `ReservedSeat` 저장이 분리되어 있었다. 이 경우 좌석 저장이 실패하면 좌석 없는 `Reservation`이 남을 수 있고, 동시에 같은 상영 회차 좌석 저장 요청이 들어오면 여러 트랜잭션이 같은 좌석 저장을 시도하는 Race Condition 상황이 발생할 수 있다.
+
+현재는 `POST /api/reservations` 요청에서 예매 정보와 좌석 목록을 함께 받아, `Reservation` 생성과 `ReservedSeat` 저장을 하나의 트랜잭션으로 처리한다. 좌석 중복이 발생하면 `SEAT_ALREADY_RESERVED` 예외가 발생하고 전체 트랜잭션이 rollback되어 좌석 없는 예약이 남지 않는다.
+
+## 해결 방법 비교
+
+### 1. synchronized
+- 개념: JVM 내부에서 특정 코드 블록을 한 번에 하나의 스레드만 실행하도록 막는다.
+- 장점: 구현이 단순하고 별도 인프라가 필요 없다.
+- 단점: 단일 서버/JVM 안에서만 동작하며, 서버가 여러 대면 중복 요청을 막지 못한다.
+- 적합한 상황: 단일 JVM 내부의 짧고 단순한 임계 구역 보호.
+- 우리 서비스에 적용하기 어려운 이유 또는 적합성: 예매 좌석은 DB에 저장되는 공유 자원이고, 멀티 서버 확장 가능성을 고려하면 부적합하다.
+
+### 2. 비관적 락
+- 개념: 트랜잭션이 데이터를 읽을 때 DB row에 락을 걸어 다른 트랜잭션의 동시 수정을 기다리게 한다.
+- 장점: 충돌 가능성이 높은 자원을 DB 수준에서 직렬화할 수 있다.
+- 단점: 락 대기 시간이 생기며, 락 순서가 꼬이면 Deadlock 위험이 있다.
+- 적합한 상황: 같은 좌석, 같은 상영 회차처럼 동시에 접근하면 안 되는 자원이 명확한 경우.
+- 우리 서비스에 적합한지: 같은 `Screening`의 좌석 저장 요청을 순서대로 처리하기에 적합하다.
+
+### 3. 낙관적 락
+- 개념: `@Version` 값으로 수정 충돌을 감지하고, 충돌 시 예외를 발생시킨다.
+- 장점: 락 대기 비용이 적고 읽기 많은 환경에 유리하다.
+- 단점: 충돌 후 재시도/예외 처리가 필요하고, insert 중복 문제에는 직접적이지 않다.
+- 적합한 상황: 같은 엔티티를 자주 읽지만 동시에 수정하는 빈도는 낮은 경우.
+- 우리 서비스에 적합한지: 좌석 중복 예매는 `ReservedSeat` 신규 insert 충돌이 핵심이라 `@Version`만으로는 직접 해결하기 어렵다.
+
+### 4. Redis 분산 락
+- 개념: Redis에 특정 key를 락으로 저장해 여러 서버 간 동시 접근을 제어한다.
+- 장점: 멀티 서버 환경에서 좌석 단위 락을 정교하게 걸 수 있다.
+- 단점: Redis 인프라, 락 만료, 장애 상황 처리가 필요해 복잡도가 높다.
+- 적합한 상황: 트래픽이 크고 애플리케이션 서버가 여러 대인 운영 환경.
+- 우리 서비스에 적합한지: 현재 프로젝트 규모에서는 과하다. 추후 멀티 서버와 대규모 트래픽을 고려할 때 후보가 될 수 있다.
+
+### 5. 유니크 제약 조건
+- 개념: DB에서 특정 컬럼 조합의 중복 저장을 금지한다.
+- 장점: 멀티 서버 환경에서도 DB가 최종적으로 중복 데이터를 막는다.
+- 단점: 충돌을 사전에 막기보다 저장 시점에 예외로 감지한다.
+- 적합한 상황: 같은 상영 회차의 같은 좌석처럼 절대 중복되면 안 되는 데이터.
+- 우리 서비스에 적합한지: 이미 `ReservedSeat`에 적용되어 있으며, 반드시 유지해야 하는 최종 방어선이다.
+
+## CGV 서비스에 선택한 해결 방법
+
+선택한 방법은 **DB 유니크 제약 조건 유지 + 상영 회차 row에 비관적 락 적용**이다.
+
+선택 근거는 다음과 같다.
+- 현재 프로젝트는 Spring/JPA 기반이므로 `@Lock(LockModeType.PESSIMISTIC_WRITE)`를 Repository에 적용하는 방식이 가장 작다.
+- 같은 상영 회차의 같은 좌석 중복 예매를 막는 것이 핵심이므로, 좌석 저장 전에 해당 `Screening` row를 잠그면 같은 회차 좌석 저장 흐름을 직렬화할 수 있다.
+- 기존 `(screening_id, seat_row, seat_col)` 유니크 제약은 유지해 DB 최종 방어선을 남긴다.
+- Redis 분산 락은 현재 규모에는 복잡하고, `synchronized`는 멀티 서버에서 동작하지 않는다.
+- 낙관적 락은 기존 row 업데이트 충돌 감지에는 좋지만, 현재 문제처럼 좌석 row insert 중복을 직접 막는 데는 유니크 제약과 비관적 락 조합보다 덜 적합하다.
+
+## 적용 내용
+
+- `ScreeningRepository.findByIdForUpdate()`를 추가하고 `PESSIMISTIC_WRITE` 락을 적용했다.
+- `ReservationService.createReservation()`에서 `Screening`을 비관적 락으로 조회하고, `Reservation` 생성과 `ReservedSeat` 저장을 하나의 트랜잭션으로 묶었다.
+- `ReservationCreateRequest`에 좌석 목록을 추가해 예매 확정 API에서 좌석까지 함께 받도록 변경했다.
+- `ReservedSeat`의 유니크 제약과 `DataIntegrityViolationException`을 `SEAT_ALREADY_RESERVED`로 변환하는 기존 방어 로직은 유지했다.
+
+예매 생성 요청 예시:
+
+```json
+{
+  "screeningId": 1,
+  "peopleCount": 2,
+  "payment": "APP_CARD",
+  "couponCode": "WELCOME_CGV",
+  "seats": [
+    { "row": "G", "col": 4 },
+    { "row": "G", "col": 5 }
+  ]
+}
+```
+
+## 검증 내용
+
+- `database=cgv password=dngur1213 ./gradlew test --tests com.ceos23.cgv.domain.reservation.service.ReservationServiceTest`
+- `database=cgv password=dngur1213 ./gradlew test --tests com.ceos23.cgv.domain.reservation.service.ReservedSeatServiceTest`
+- `database=cgv password=dngur1213 ./gradlew test`
+
+동시성 통합 테스트는 별도 테스트 DB가 분리되어 있지 않고 현재 테스트가 로컬 MySQL 환경변수에 의존하므로, 이번 변경에서는 서비스 단위 테스트와 전체 테스트로 회귀 여부를 확인했다.
+
+</details>
+
+<details>
 <summary>이전 README 내용</summary>
 
 # spring-cgv-23rd

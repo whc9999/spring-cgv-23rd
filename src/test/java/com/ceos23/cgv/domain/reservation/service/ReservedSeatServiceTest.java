@@ -53,7 +53,7 @@ class ReservedSeatServiceTest {
         Screening screening = Screening.builder().id(screeningId).build();
 
         given(reservationRepository.findById(reservationId)).willReturn(Optional.of(reservation));
-        given(screeningRepository.findById(screeningId)).willReturn(Optional.of(screening));
+        given(screeningRepository.findByIdForUpdate(screeningId)).willReturn(Optional.of(screening));
 
         given(reservedSeatRepository.saveAll(anyList())).willThrow(DataIntegrityViolationException.class);
 
