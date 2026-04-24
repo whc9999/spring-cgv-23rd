@@ -2,10 +2,8 @@ package com.ceos23.cgv.domain.concession.controller;
 
 import com.ceos23.cgv.domain.concession.dto.FoodOrderRequest;
 import com.ceos23.cgv.domain.concession.dto.FoodOrderResponse;
-import com.ceos23.cgv.domain.concession.dto.ProductCreateRequest;
 import com.ceos23.cgv.domain.concession.dto.ProductResponse;
 import com.ceos23.cgv.domain.concession.entity.FoodOrder;
-import com.ceos23.cgv.domain.concession.entity.Product;
 import com.ceos23.cgv.domain.concession.service.ConcessionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,22 +38,6 @@ public class ConcessionController {
         FoodOrder order = concessionService.createOrder(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(FoodOrderResponse.from(order));
-    }
-
-    @PostMapping("/products")
-    @Operation(summary = "매점 상품 등록", description = "새로운 매점 상품(팝콘, 콤보 등)을 DB에 등록합니다.")
-    public ResponseEntity<ProductResponse> createProduct(@RequestBody ProductCreateRequest request) {
-        Product createdProduct = concessionService.createProduct(
-                request.name(),
-                request.price(),
-                request.description(),
-                request.origin(),
-                request.ingredient(),
-                request.pickupPossible(),
-                request.category()
-        );
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ProductResponse.from(createdProduct));
     }
 
     @GetMapping("/orders")

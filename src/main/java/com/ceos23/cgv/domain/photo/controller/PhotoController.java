@@ -1,13 +1,10 @@
 package com.ceos23.cgv.domain.photo.controller;
 
-import com.ceos23.cgv.domain.photo.dto.PhotoCreateRequest;
 import com.ceos23.cgv.domain.photo.dto.PhotoResponse;
-import com.ceos23.cgv.domain.photo.entity.Photo;
 import com.ceos23.cgv.domain.photo.service.PhotoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,13 +18,6 @@ import java.util.stream.Collectors;
 public class PhotoController {
 
     private final PhotoService photoService;
-
-    @PostMapping
-    @Operation(summary = "사진 등록", description = "영화 또는 인물에 연관된 사진 URL(name)을 등록합니다. (movieId나 personId 중 하나 필수)")
-    public ResponseEntity<PhotoResponse> createPhoto(@RequestBody PhotoCreateRequest request) {
-        Photo photo = photoService.createPhoto(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(PhotoResponse.from(photo));
-    }
 
     @GetMapping("/movie/{movieId}")
     @Operation(summary = "특정 영화의 사진 조회", description = "영화 ID를 통해 해당 영화의 스틸컷/포스터 목록을 불러옵니다.")
