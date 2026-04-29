@@ -2,6 +2,184 @@
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
 <details>
+<summary>5주차 배포 미션 정리</summary>
+
+## 1. 프로젝트 마무리 및 리팩토링
+
+### 진행 내용
+
+- 예약 생성과 좌석 저장을 하나의 예매 흐름으로 통합했다.
+- 같은 상영 회차의 같은 좌석 중복 예매를 막기 위해 `Screening` 비관적 락과 `ReservedSeat` 유니크 제약을 함께 사용했다.
+- 예매 결제에는 티켓팅 케이스를 적용해 좌석을 먼저 선점하고, 결제 실패 또는 취소 시 좌석을 복구하도록 했다.
+- 매점 결제에는 커머스 케이스를 적용해 결제 성공 후 재고를 차감하도록 했다.
+- 운영성 API는 `/api/admin/**` 컨트롤러로 분리해 관리자 권한 규칙을 타도록 정리했다.
+- JWT 보안 리뷰를 반영해 인증/인가 실패 응답, refresh token HttpOnly Cookie, JWT secret 환경변수화를 적용했다.
+
+### 리팩토링 기준
+
+- Service는 유스케이스 흐름 조율에 집중한다.
+- 도메인 규칙은 도메인 객체 또는 정책 객체로 이동한다.
+- DTO 변환은 응답 DTO의 `from` 메서드와 Controller 계층에서 처리한다.
+- 예외는 `CustomException`과 `ErrorCode` 기반으로 통일한다.
+- 과도한 구조 변경보다 현재 프로젝트 규모에 맞는 점진적 개선을 우선한다.
+
+### 리팩토링 결과
+
+- `Reservation`, `FoodOrder`, `Inventory`에 상태 변경과 검증 메서드를 모아 Service의 조건문을 줄였다.
+- `CouponDiscountPolicy`, `ReservationPricePolicy`로 가격/할인 정책을 분리했다.
+- `ReservationService`와 `ConcessionService`의 결제 흐름은 DB 트랜잭션과 외부 API 호출을 분리해 락 점유 시간과 상태 불일치 위험을 줄였다.
+- `PaymentService`와 `PaymentClient`로 외부 결제 API 호출 책임을 분리했다.
+- `GlobalExceptionHandler`, `CustomAuthenticationEntryPoint`, `CustomAccessDeniedHandler`로 API 에러 응답 형식을 맞췄다.
+- 매점 주문 총액 계산을 `FoodOrder`와 `OrderItem` 도메인 메서드로 이동해 Service가 계산식을 직접 알지 않도록 했다.
+- 매점 재고 차감 시 `productId` 기준으로 정렬한 뒤 비관적 락을 획득해 상품 주문 순서 차이로 발생할 수 있는 데드락 위험을 줄였다.
+- 쿠폰 할인 규칙을 `Coupon` enum으로 분리해 쿠폰 코드별 할인 정책을 한 곳에서 관리하도록 했다.
+
+## 2. Docker 기반 배포
+
+### Dockerfile 구성
+
+- Build stage: `gradle:8.14-jdk21`
+- Runtime stage: `eclipse-temurin:21-jre`
+- 빌드 단계에서 `gradle clean bootJar --no-daemon`으로 jar를 생성한다.
+- 실행 단계에서는 생성된 jar를 `java -jar app.jar`로 실행한다.
+
+## 3. 수동 배포
+
+### 배포 환경
+
+- Platform: Render
+- Database: Aiven MySQL
+- Runtime: Docker
+- 배포 URL: https://spring-cgv-23rd.onrender.com
+
+### AWS EC2 대신 Render를 사용한 이유
+
+기존에는 AWS EC2를 활용한 배포를 고려했지만, 프리티어 사용량이 만료되어 추가 비용이 발생하는 상황이었다.
+
+또한, 이전에 AWS EC2를 활용해 여러번 배포를 해보았기 때문에 다른 플랫폼 경험도 쌓을겸 해서 여러 방안을 찾아보았다.
+
+무료 플랜을 제공하는 PaaS 기반 배포 플랫폼을 대안으로 검토하였고, Render, Railway, Fly.io, Oracle Cloud Free Tier 등을 비교하였다. 그중 Render를 선택한 이유는 다음과 같다.
+
+- 무료 플랜으로도 서비스 배포 실습이 가능하다.
+- GitHub 연동 및 CI/CD 구성이 단순하다.
+- Docker 기반 배포를 지원해 환경 일관성을 유지할 수 있다.
+- 별도의 인프라 설정 없이 빠르게 배포할 수 있다.
+
+이번 과제의 목적은 배포 경험, CI/CD 구성 등에 있으므로 반드시 AWS를 사용해야 하는 것은 아니라고 판단했다. 최종적으로 Render를 사용하되, 배포 구조는 Docker 이미지 기반으로 구성하여 향후 AWS EC2 환경에서도 동일하게 실행할 수 있도록 했다.
+
+### 배포 과정
+
+1. Dockerfile 작성
+2. Render Web Service 생성
+3. GitHub Repository 연결
+4. Aiven MySQL 생성
+5. Render Environment Variables 등록
+6. 수동 배포 실행
+7. 서버 정상 실행 확인
+
+### 환경변수 관리
+
+Render에는 다음 환경변수를 등록했다. 실제 값은 Git과 README에 기록하지 않는다.
+
+- `PORT`
+- `DB_HOST`
+- `DB_PORT`
+- `DB_NAME`
+- `DB_USERNAME`
+- `DB_PASSWORD`
+- `JWT_SECRET`
+- `PAYMENT_API_SECRET_KEY`
+
+민감 정보는 `.env`에 로컬로만 두고, Git에는 올리지 않는다. 현재 `.env`는 `.gitignore`에 포함되어 있으며 Git 추적 대상이 아니다.
+
+### 배포 확인
+
+![img.png](img.png)
+
+- Render 로그에서 Spring Boot `Started Application` 로그를 확인했다.
+- 보호된 API를 인증 없이 호출하면 `401` 응답이 반환된다.
+- 이는 서버가 정상 실행 중이고, Spring Security 인증 필터가 보호 API를 정상적으로 막고 있다는 의미이다.
+
+## 4. CI/CD 자동 배포
+
+### 적용 방식
+
+- GitHub Actions로 CI를 수행한다.
+- Render의 Auto Deploy 옵션은 `After CI Checks Pass`로 설정한다.
+- 따라서 테스트 또는 빌드가 실패하면 Render 자동 배포가 진행되지 않는다.
+
+### 자동 배포 흐름
+
+1. `main` 브랜치에 push 또는 PR 생성
+2. GitHub Actions 실행
+3. JDK 21 설정
+4. Gradle cache 적용
+5. `./gradlew test --no-daemon` 실행
+6. `./gradlew clean bootJar --no-daemon` 실행
+7. CI 성공 시 Render가 자동 배포
+8. CI 실패 시 배포 중단
+
+### GitHub Actions 구성
+
+- Workflow: `.github/workflows/ci.yml`
+- Trigger: `main` 브랜치 push, `main` 대상 pull request
+- JDK: 21
+- Distribution: Temurin
+- Cache: Gradle
+- Test: `./gradlew test --no-daemon`
+- Build: `./gradlew clean bootJar --no-daemon`
+
+### 기대 효과
+
+- 수동 배포 반복을 줄인다.
+- 테스트 실패 코드가 배포되는 것을 막는다.
+- 배포 과정의 일관성과 재현성을 높인다.
+
+## 5. 트러블슈팅
+
+### Gradle 버전 문제
+
+- 문제: Spring Boot 4.0.3은 Gradle 8.14 이상이 필요했다.
+- 해결: Dockerfile의 빌드 이미지를 `gradle:8.7-jdk21`에서 `gradle:8.14-jdk21`로 설정했다.
+
+### 환경 변수 누락
+
+![img_1.png](img_1.png)
+- 문제: Render는 로컬 `.env` 파일을 자동으로 읽지 않는다.
+- 해결: Render Environment Variables에 환경 변수를 직접 등록했다.
+
+### host.docker.internal 문제
+
+- 문제: 로컬 Docker에서는 `host.docker.internal`로 Mac의 MySQL에 접근할 수 있지만, Render 클라우드 환경에서는 사용할 수 없다.
+- 해결: Aiven MySQL 외부 DB를 생성하고 `DB_HOST`, `DB_PORT`를 Aiven 접속 정보로 등록했다.
+
+## 6. 추가 학습
+
+### Bastion Host
+
+- 개념: private subnet 내부 서버에 직접 접근하지 않고, 제한된 중간 서버를 통해 안전하게 접속하기 위한 서버이다.
+- 이번 프로젝트 적용 여부: Render 기반 PaaS 배포와 Aiven 외부 DB를 사용했으므로 직접 적용하지 않았다.
+
+### Public Subnet / Private Subnet
+
+- Public Subnet: 인터넷 게이트웨이를 통해 외부에서 접근 가능한 서브넷이다.
+- Private Subnet: 외부에서 직접 접근할 수 없고 내부 통신 중심으로 구성하는 서브넷이다.
+- 이번 프로젝트 적용 여부: AWS VPC를 직접 구성하지 않았으므로 적용하지 않았다. 다만 EC2로 확장한다면 웹 서버는 public subnet, DB는 private subnet에 두는 구조를 고려할 수 있다.
+
+### Subnet CIDR
+
+- 개념: VPC 네트워크를 더 작은 IP 주소 범위로 나누기 위한 표기 방식이다.
+- 이번 프로젝트 적용 여부: Render와 Aiven이 네트워크 구성을 관리하므로 직접 설정하지 않았다.
+
+## 7. 느낀 점
+
+이번 미션을 통해 Docker, 외부 DB, 클라우드 배포, CI/CD 흐름을 직접 연결하면서 로컬 환경과 배포 환경의 차이를 이해했다. 특히 로컬의 `.env`, Docker 컨테이너의 네트워크, Render의 환경변수, Aiven MySQL 접속 정보가 각각 다르게 동작한다는 점을 실제 오류를 통해 확인했다.
+
+또한 GitHub Actions와 Render의 `After CI Checks Pass` 흐름을 연결하면서, 단순히 서버를 한 번 띄우는 것보다 테스트가 통과한 코드만 배포되도록 만드는 과정이 중요하다는 점을 배웠다.
+
+</details>
+
+<details>
 <summary>리팩토링 내역 및 설계 의도</summary>
 
 ## 리팩토링 개요
@@ -541,7 +719,6 @@ DB는 이렇게 생각함
 
   → 경고 로그 발생
 
-
 ```java
 firstResult/maxResults specified with collection fetch; applying in memory!
 ```
@@ -831,7 +1008,6 @@ CGV는 영화 관람을 중심으로 다양한 기능을 제공하는 복합 플
 
       실제 상영 정보(`screenings`)는 완전히 다른 개념
 
-
     `movies`
     
     → 영화 메타데이터 (제목, 러닝타임 등)
@@ -859,7 +1035,6 @@ CGV는 영화 관람을 중심으로 다양한 기능을 제공하는 복합 플
     - 좌석은 따로 테이블을 만들지 않고
 
       **예매된 좌석만 저장**
-
 
     추가 핵심:
     
@@ -942,7 +1117,6 @@ CGV는 영화 관람을 중심으로 다양한 기능을 제공하는 복합 플
     - 확장 시 마이그레이션 필요 (트레이드오프)
 
 <img width="2860" height="1892" alt="image" src="https://github.com/user-attachments/assets/e3baf6d9-ca74-43c1-be06-7ed91c85bb58" />
-
 
 https://www.erdcloud.com/d/PhXPysc9AfrTJbSYq
 

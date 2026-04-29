@@ -35,4 +35,8 @@ public class OrderItem {
                 .quantity(quantity)
                 .build();
     }
+
+    public int calculatePrice() {
+        return product.getPrice() * quantity;
+    }
 }

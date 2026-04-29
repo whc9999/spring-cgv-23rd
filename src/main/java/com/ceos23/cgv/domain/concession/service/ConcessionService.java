@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -101,7 +102,7 @@ public class ConcessionService {
         List<OrderItem> orderItems = createOrderItems(request, foodOrder, productMap);
         orderItemRepository.saveAll(orderItems);
 
-        foodOrder.updateTotalPrice(calculateTotalPrice(orderItems));
+        foodOrder.calculateTotalPrice(orderItems);
 
         return foodOrder;
     }
@@ -182,9 +183,11 @@ public class ConcessionService {
     }
 
     private void decreaseInventoryStocks(Long cinemaId, List<OrderItem> orderItems) {
-        orderItems.forEach(orderItem ->
-                decreaseInventoryStock(cinemaId, orderItem.getProduct().getId(), orderItem.getQuantity())
-        );
+        orderItems.stream()
+                .sorted(Comparator.comparing(orderItem -> orderItem.getProduct().getId()))
+                .forEach(orderItem ->
+                        decreaseInventoryStock(cinemaId, orderItem.getProduct().getId(), orderItem.getQuantity())
+                );
     }
 
     private void decreaseInventoryStock(Long cinemaId, Long productId, int quantity) {
@@ -192,12 +195,6 @@ public class ConcessionService {
                 .orElseThrow(() -> new CustomException(ErrorCode.INVENTORY_SHORTAGE));
 
         inventory.removeStock(quantity);
-    }
-
-    private int calculateTotalPrice(List<OrderItem> orderItems) {
-        return orderItems.stream()
-                .mapToInt(orderItem -> orderItem.getProduct().getPrice() * orderItem.getQuantity())
-                .sum();
     }
 
     /**

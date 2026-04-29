@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -165,6 +166,55 @@ class ConcessionServiceTest {
         verify(foodOrderRepository).save(any(FoodOrder.class));
         verify(orderItemRepository).saveAll(anyList());
         verify(paymentService).requestInstantPayment(savedOrderRef.get());
+    }
+
+    @Test
+    @DisplayName("매점 재고 차감 시 productId 오름차순으로 락을 획득한다")
+    void createOrder_Success_DecreaseInventoryStocksInProductIdOrder() {
+        // Given
+        User user = User.builder().id(1L).nickname("우혁").build();
+        Cinema cinema = Cinema.builder().id(1L).name("CGV 신촌").build();
+        Product popcorn = Product.builder().id(1L).name("달콤 팝콘").price(5000).build();
+        Product cola = Product.builder().id(2L).name("콜라").price(3000).build();
+        Inventory popcornInventory = Inventory.builder()
+                .id(1L).cinema(cinema).product(popcorn).stockQuantity(10).build();
+        Inventory colaInventory = Inventory.builder()
+                .id(2L).cinema(cinema).product(cola).stockQuantity(10).build();
+        FoodOrderRequest request = new FoodOrderRequest(
+                1L, 1L,
+                List.of(
+                        new FoodOrderRequest.OrderItemRequest(2L, 1),
+                        new FoodOrderRequest.OrderItemRequest(1L, 2)
+                )
+        );
+
+        AtomicReference<FoodOrder> savedOrderRef = new AtomicReference<>();
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(cinemaRepository.findById(1L)).willReturn(Optional.of(cinema));
+        given(productRepository.findAllById(List.of(2L, 1L))).willReturn(List.of(cola, popcorn));
+        given(paymentService.createFoodOrderPaymentId()).willReturn(PAYMENT_ID);
+        given(foodOrderRepository.save(any(FoodOrder.class))).willAnswer(invocation -> {
+            FoodOrder foodOrder = invocation.getArgument(0);
+            savedOrderRef.set(foodOrder);
+            return foodOrder;
+        });
+        given(foodOrderRepository.findByPaymentId(PAYMENT_ID)).willAnswer(invocation ->
+                Optional.of(savedOrderRef.get()));
+        given(orderItemRepository.findByFoodOrderId(any())).willAnswer(invocation ->
+                List.of(
+                        com.ceos23.cgv.domain.concession.entity.OrderItem.create(savedOrderRef.get(), cola, 1),
+                        com.ceos23.cgv.domain.concession.entity.OrderItem.create(savedOrderRef.get(), popcorn, 2)
+                ));
+        given(inventoryRepository.findByCinemaIdAndProductIdForUpdate(1L, 1L)).willReturn(Optional.of(popcornInventory));
+        given(inventoryRepository.findByCinemaIdAndProductIdForUpdate(1L, 2L)).willReturn(Optional.of(colaInventory));
+
+        // When
+        concessionService.createOrder(request);
+
+        // Then
+        var inOrder = inOrder(inventoryRepository);
+        inOrder.verify(inventoryRepository).findByCinemaIdAndProductIdForUpdate(1L, 1L);
+        inOrder.verify(inventoryRepository).findByCinemaIdAndProductIdForUpdate(1L, 2L);
     }
 
     @Test

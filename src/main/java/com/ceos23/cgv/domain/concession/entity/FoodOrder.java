@@ -9,6 +9,8 @@ import com.ceos23.cgv.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Table(name = "food_orders")
 @Getter
@@ -52,6 +54,12 @@ public class FoodOrder extends BaseTimeEntity {
     // 총 결제 금액을 업데이트하는 메서드
     public void updateTotalPrice(int totalPrice) {
         this.totalPrice = totalPrice;
+    }
+
+    public void calculateTotalPrice(List<OrderItem> orderItems) {
+        this.totalPrice = orderItems.stream()
+                .mapToInt(OrderItem::calculatePrice)
+                .sum();
     }
 
     public void completePayment() {
