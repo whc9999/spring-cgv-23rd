@@ -677,9 +677,10 @@ Spring은 일반적으로 요청마다 별도 스레드가 처리되는 Thread P
 # spring-cgv-23rd
 CEOS 23기 백엔드 스터디 - CGV 클론 코딩 프로젝트
 
-## ❓EntityManager는 누가 생성하고, DB와의 연결은 어떻게 이루어질까요?
+<details>
+<summary>❓EntityManager는 누가 생성하고, DB와의 연결은 어떻게 이루어질까요?</summary>
 
-### EntityManager는 누가 생성할까?
+## EntityManager는 누가 생성할까?
 
 직접 `new EntityManager()`로 만드는 게 아니라, **JPA 구현체(예: Hibernate)** 가 생성한다.
 조금 더 정확히 말하면, **EntityManagerFactory**가 EntityManager를 생성한다.
@@ -1157,6 +1158,8 @@ Set<Order> orders;
 | 페이징 에러 | 컬렉션 fetch join | fetch join 제거 |
 | owner 없음 | select 대상 누락 | owner 포함 |
 | multiple bag | List 2개 fetch | Set / 분리 조회 |
+
+</details>
 
 ## 1️⃣ DB를 모델링해봐요!
 
